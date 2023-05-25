@@ -1,49 +1,53 @@
-from .models import Filme
-from . serializers import FilmeSerializer
-from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from .models import Filme
+from .serializers import FilmeSerializer
 
-
-@api_view(['GET', 'POST'])
-def filmes(request):
-
-    if request.method == "GET":
+class FilmesAPIView(APIView):
+    def get(self, request):
         filmes = Filme.objects.all()
         filme_serializer = FilmeSerializer(filmes, many=True)
         return Response(filme_serializer.data)
-    
-    if request.method == "POST":
+
+    def post(self, request):
         filme_serializer = FilmeSerializer(data=request.data)
         if filme_serializer.is_valid():
             filme_serializer.save()
             return Response(filme_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(filme_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def filme_detail(request, id):
+class FilmeDetailAPIView(APIView):
+    def get_object(self, id):
+        try:
+            return Filme.objects.get(id=id)
+        except Filme.DoesNotExist:
+            return None
 
-    try:
-        filme = Filme.objects.get(id=id)
-    except Filme.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-
-    if request.method == "GET":
+    def get(self, request, id):
+        filme = self.get_object(id)
+        if filme is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         filme_serializer = FilmeSerializer(filme)
         return Response(filme_serializer.data)
 
-    elif request.method == "PUT":
+    def put(self, request, id):
+        filme = self.get_object(id)
+        if filme is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         filme_serializer = FilmeSerializer(filme, data=request.data)
         if filme_serializer.is_valid():
             filme_serializer.save()
             return Response(filme_serializer.data, status=status.HTTP_200_OK)
         return Response(filme_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == "DELETE":
+    def delete(self, request, id):
+        filme = self.get_object(id)
+        if filme is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         filme.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 
 
